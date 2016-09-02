@@ -1,0 +1,305 @@
+/*
+ * Demonstrates the use of 4x 8 segment displays.
+ * All segments are connected in parallel and each display unit is controlled with a PNP transistor 
+ * Each segment is connected in parallel with each other.
+ * 
+ * 
+ * Schematic:
+ * 
+ *                  Collector     Emitter
+ * ANODE of display --------     ---------- + 5V
+ *                          \   /
+ *                          _\_/_
+ *                            | Base
+ *                            |
+ *                   Arduino controll pin
+ *                   
+ *    a
+ *   ---
+ * f| g |b
+ *   ---
+ * e| d |c
+ *   --- .dp
+ *    
+ * 
+ */
+
+//Definition of controll pins
+#define Display1 A2
+#define Display2 A3
+#define Display3 A4
+#define Display4 A5
+
+//Definition of segment pins
+#define a 6
+#define b 7
+#define c 8
+#define d 9
+#define e 10
+#define f 11
+#define g 12
+#define dp 13
+
+
+
+
+void setup() {
+  //Setting up the controll pins for each display unit as outputs
+  pinMode(Display1, OUTPUT);            //First display unit (MSB) 
+  pinMode(Display2, OUTPUT);            //Second display unit
+  pinMode(Display3, OUTPUT);            //Third display unit
+  pinMode(Display4, OUTPUT);            //Forth display unit (LSB)
+
+  //Setting up the digit pins as outputs
+  pinMode(a, OUTPUT);                   //a
+  pinMode(b, OUTPUT);                   //b
+  pinMode(c, OUTPUT);                   //c
+  pinMode(d, OUTPUT);                   //d
+  pinMode(e, OUTPUT);                   //e
+  pinMode(f, OUTPUT);                   //f
+  pinMode(g, OUTPUT);                   //g
+  pinMode(dp, OUTPUT);                  //dp2
+
+
+  //Activate all 4 displays in order to perform a test
+  digitalWrite(Display1, LOW);          //Display 1 ON
+  digitalWrite(Display2, LOW);          //Display 2 ON
+  digitalWrite(Display3, LOW);          //Display 3 ON
+  digitalWrite(Display4, LOW);          //Display 4 ON
+  
+  for(int i=0;i<10;i++){                //For loop to write all digits on the displays
+    digit(i,1);                         //Call digit function with numbers from 0 to 9 with dots
+    delay(70);                          //Delay 70ms in order for you to see the numbers
+  }                                     //End of for loop
+  
+  delay(500);                           //Delay 500ms in order to see the displays
+  digitalWrite(Display1, HIGH);         //Display 1 OFF
+  digitalWrite(Display2, HIGH);         //Display 2 OFF
+  digitalWrite(Display3, HIGH);         //Display 3 OFF
+  digitalWrite(Display4, HIGH);         //Display 4 OFF
+}//End of setup() function
+
+
+
+void loop() {                           //Infinite loop
+  String info;                          //String that will contain the information you want to write on the displays
+  info += millis() / 1000;              //Write the seconds passed from the moment that your arduino is powered on to the string
+  segment_display(info);                //Send the string to the function that will write the info to the displays
+}//End of loop() function
+
+
+
+int segment_display(String val){        //Function that will prepare the string and write it to the Display units
+  char buf[6];                          //Create a char array to hold the incoming string
+  int nr_crt=0;                         //Variable for determination of the number of digits
+  int index=0;                          //Variable that helps store the position of the dot when it will be associated with the number in front of it
+  int number[6];                        //Array to store the digits
+  int dots[6];                          //Array to store the dot positions
+  
+  for(int i=0;i<6;i++){dots[i]=0;}      //Initiate the dots array with 0
+  
+  val.toCharArray(buf, 6);              //Copy the string to the char array buffer
+  
+  for(int i=0;i<val.length();i++){      //Determine the number of digits in the char array and create two array (or a matrix) with the information
+    if(isDigit(buf[i])){                //If a digit is found
+        nr_crt++;                       //Count the digit and
+        number[i-index]=buf[i] - '0';   //Transfer the digit to the new array
+        }
+    else{                               //If a char is found (not a digit)
+       index++;                         //Count it  in order to associate it with the digit in front of it and
+       dots[i-1]=1;                     //Signal it in the int array for the dots
+       }
+  }                                     //End of for loop which determines the number of digits
+
+
+  
+  for(int i=0;i<nr_crt;i++){            //Writing the digits from the matrix to the display units
+
+    digitalWrite(Display1, HIGH);       // Turn off display 1
+    digitalWrite(Display2, HIGH);       // Turn off display 2
+    digitalWrite(Display3, HIGH);       // Turn off display 3
+    digitalWrite(Display4, HIGH);       // Turn off display 4
+    
+    switch(i){                          //Swith statement to determine on what display to write the information
+      
+      case 0:                           //Display 1
+        digit(number[i], dots[i]);      //Write the digit on display
+        digitalWrite(Display1, LOW);    //Turn ON Display 1
+        delay(3);                       //Necessary delay so you can see the number on the display unit
+        break;
+        
+      case 1:                           //Display 2
+        digit(number[i], dots[i]);      //Write the digit on display
+        digitalWrite(Display2, LOW);    //Turn ON Display 2
+        delay(3);                       //Necessary delay so you can see the number on the display unit
+        break;
+        
+      case 2:                           //Display 3
+        digit(number[i], dots[i]);      //Write the digit on display
+        digitalWrite(Display3, LOW);    //Turn ON Display 3
+        delay(3);                       //Necessary delay so you can see the number on the display unit
+        break;
+        
+      case 3:                           //Display 4
+        digit(number[i], dots[i]);      //Write the digit on display
+        digitalWrite(Display4, LOW);    //Turn ON Display 4
+        delay(3);                       //Necessary delay so you can see the number on the display unit
+        break;
+        
+      default:                          //Default action if "i" does not equal 0,1,2 or 3. This helps if you have a long number. Only the MSB will be shown on the 4 displays
+        digitalWrite(Display1, HIGH);   //Turn OFF display 1
+        digitalWrite(Display2, HIGH);   //Turn OFF display 2
+        digitalWrite(Display3, HIGH);   //Turn OFF display 3
+        digitalWrite(Display4, HIGH);   //Turn OFF display 4
+        break;
+
+        
+    }//End of Switch statement 
+  }//End of for loop containing the number of digits to display
+}//End of function segment_display()
+
+
+
+
+
+int digit(int nr, int pct){ 
+  //Function for creating the digits on the 7 segments
+  //nr - Digit to create
+  //pct:
+  //  case 1: pct=1 - Create a digit with a dot "."
+  //  case 2: pct!=1 - Create a digit without a dot "."
+  
+  switch(nr){
+    case 0: //Digit 0
+      digitalWrite(a, LOW);                 //a
+      digitalWrite(b, LOW);                 //b
+      digitalWrite(c, LOW);                 //c
+      digitalWrite(d, LOW);                 //d
+      digitalWrite(e, LOW);                 //e
+      digitalWrite(f, LOW);                 //f
+      digitalWrite(g, HIGH);                //g
+      if(pct == 1){digitalWrite(dp, LOW);}  //dp
+      else{digitalWrite(dp, HIGH);}
+      break;
+      
+    case 1: //Digit 1
+      digitalWrite(a, HIGH);                //a
+      digitalWrite(b, LOW);                 //b
+      digitalWrite(c, LOW);                 //c
+      digitalWrite(d, HIGH);                //d
+      digitalWrite(e, HIGH);                //e
+      digitalWrite(f, HIGH);                //f
+      digitalWrite(g, HIGH);                //g
+      if(pct == 1){digitalWrite(dp, LOW);}  //dp
+      else{digitalWrite(dp, HIGH);}
+      break;
+      
+    case 2: //Digit 2
+      digitalWrite(a, LOW);                 //a
+      digitalWrite(b, LOW);                 //b
+      digitalWrite(c, HIGH);                //c
+      digitalWrite(d, LOW);                 //d
+      digitalWrite(e, LOW);                 //e
+      digitalWrite(f, HIGH);                //f
+      digitalWrite(g, LOW);                 //g
+      if(pct == 1){digitalWrite(dp, LOW);}  //dp
+      else{digitalWrite(dp, HIGH);}
+      break;
+      
+    case 3: //Digit 3
+      digitalWrite(a, LOW);                 //a
+      digitalWrite(b, LOW);                 //b
+      digitalWrite(c, LOW);                 //c
+      digitalWrite(d, LOW);                 //d
+      digitalWrite(e, HIGH);                //e
+      digitalWrite(f, HIGH);                //f
+      digitalWrite(g, LOW);                 //g
+      if(pct == 1){digitalWrite(dp, LOW);}  //dp
+      else{digitalWrite(dp, HIGH);}
+      break;
+      
+    case 4: //Digit 4
+      digitalWrite(a, HIGH);                //a
+      digitalWrite(b, LOW);                 //b
+      digitalWrite(c, LOW);                 //c
+      digitalWrite(d, HIGH);                //d
+      digitalWrite(e, HIGH);                //e
+      digitalWrite(f, LOW);                 //f
+      digitalWrite(g, LOW);                 //g
+      if(pct == 1){digitalWrite(dp, LOW);}  //dp
+      else{digitalWrite(dp, HIGH);}
+      break;
+      
+    case 5: //Digit 5
+      digitalWrite(a, LOW);                 //a
+      digitalWrite(b, HIGH);                //b
+      digitalWrite(c, LOW);                 //c
+      digitalWrite(d, LOW);                 //d
+      digitalWrite(e, HIGH);                //e
+      digitalWrite(f, LOW);                 //f
+      digitalWrite(g, LOW);                 //g
+      if(pct == 1){digitalWrite(dp, LOW);}  //dp
+      else{digitalWrite(dp, HIGH);}
+      break;
+      
+    case 6: //Digit 6
+      digitalWrite(a, LOW);                 //a
+      digitalWrite(b, HIGH);                //b
+      digitalWrite(c, LOW);                 //c
+      digitalWrite(d, LOW);                 //d
+      digitalWrite(e, LOW);                 //e
+      digitalWrite(f, LOW);                 //f
+      digitalWrite(g, LOW);                 //g
+      if(pct == 1){digitalWrite(dp, LOW);}  //dp
+      else{digitalWrite(dp, HIGH);}
+      break;
+      
+    case 7: //Digit 7
+      digitalWrite(a, LOW);                 //a
+      digitalWrite(b, LOW);                 //b
+      digitalWrite(c, LOW);                 //c
+      digitalWrite(d, HIGH);                //d
+      digitalWrite(e, HIGH);                //e
+      digitalWrite(f, HIGH);                //f
+      digitalWrite(g, HIGH);                //g
+      if(pct == 1){digitalWrite(dp, LOW);}  //dp
+      else{digitalWrite(dp, HIGH);}
+      break;
+      
+    case 8: //Digit 8
+      digitalWrite(a, LOW);                 //a
+      digitalWrite(b, LOW);                 //b
+      digitalWrite(c, LOW);                 //c
+      digitalWrite(d, LOW);                 //d
+      digitalWrite(e, LOW);                 //e
+      digitalWrite(f, LOW);                 //f
+      digitalWrite(g, LOW);                 //g
+      if(pct == 1){digitalWrite(dp, LOW);}  //dp
+      else{digitalWrite(dp, HIGH);}
+      break;
+      
+    case 9: //Digit 9
+      digitalWrite(a, LOW);                 //a
+      digitalWrite(b, LOW);                 //b
+      digitalWrite(c, LOW);                 //c
+      digitalWrite(d, LOW);                 //d
+      digitalWrite(e, HIGH);                //e
+      digitalWrite(f, LOW);                 //f
+      digitalWrite(g, LOW);                 //g
+      if(pct == 1){digitalWrite(dp, LOW);}  //dp
+      else{digitalWrite(dp, HIGH);}
+      break;
+
+    default: //Default, turn off all segments
+      digitalWrite(a, HIGH);                //a
+      digitalWrite(b, HIGH);                //b
+      digitalWrite(c, HIGH);                //c
+      digitalWrite(d, HIGH);                //d
+      digitalWrite(e, HIGH);                //e
+      digitalWrite(f, HIGH);                //f
+      digitalWrite(g, HIGH);                //g
+      digitalWrite(dp, HIGH);               //dp
+      break;
+  }//End of switch statement
+}//End of function digit()
+
